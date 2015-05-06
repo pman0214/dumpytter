@@ -3,6 +3,8 @@
 ## Overview
 dumpytter retrieves your tweets and store them into a SQLite DB.
 
+The default DB file is `~/.dumpytter/dumpytter.db`.
+
 ## Required Libraries
 - rauth
 
@@ -29,9 +31,12 @@ Open terminal to create a DB table as well as a DB file:
 
 ## Usage
 
+Just run as:
+
+	$ python dumpytter.py
+
 ## Copyright, License
 Copyright (c) 2015, Shigemi ISHIDA
-
 
 This software is released under the BSD 3-clause license.
 See LICENSE.
