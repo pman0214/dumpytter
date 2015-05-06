@@ -7,7 +7,10 @@ dumpytter retrieves your tweets and store them into a SQLite DB.
 - rauth
 
 ## Preparation
-You first need to generate a consumer key, a consumer secret, an access token, and an access token secret on [Twitter Application Management site](https://apps.twitter.com/).
+
+#### Get twitter API tokens
+
+You first need to get a consumer key, a consumer secret, an access token, and an access token secret on [Twitter Application Management site](https://apps.twitter.com/).
 
 You then create a config file `~/.dumpytter/config.ini`:
 
@@ -16,6 +19,13 @@ You then create a config file `~/.dumpytter/config.ini`:
 	consumer_sec = xxxxxx
 	access_token = xxxxxx
 	access_sec   = xxxxxx
+
+#### DB file creation
+
+Open terminal to create a DB table as well as a DB file:
+
+	$ mkdir ~/.dumpytter
+	$ sqlite3 ~/.dumpytter/dumpytter.db < sql/tbl_create.sql
 
 ## Usage
 
