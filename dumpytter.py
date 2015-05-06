@@ -139,7 +139,7 @@ class Dumpytter():
             raw_tweets.extend(tweets)
 
             # no more new tweets?
-            if len(tweets) < 200:
+            if tweets is None or len(tweets) == 0:
                 break
 
             # update max_id to retrieve old tweets
