@@ -98,7 +98,7 @@ class Dumpytter():
         # an INSERT statement template.
         sql = ("INSERT INTO statuses"
                " (status_id, status_text, user_id, user_screen_name, status_reply,"
-               "status_at, created_at, updated_at) VALUES "
+               " status_at, created_at, updated_at) VALUES"
                " (:status_id, :status_text, :user_id, :user_screen_name, :status_reply,"
                "  :status_at, :created_at, :updated_at)")
 
