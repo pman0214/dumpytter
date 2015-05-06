@@ -95,30 +95,25 @@ class Dumpytter():
 
     #--------------------------------------------------
     def store_to_db(self, tweets):
-        # generate an INSERT statement.
-        sql = "INSERT INTO statuses (status_id, status_text, user_id, user_screen_name, status_reply, status_at, created_at, updated_at) VALUES "
-        vals = []
-        for tweet in tweets:
-            vals.append('(%d, "%s", %d, "%s", "%s", "%s", "%s", "%s")' % (
-                tweet["status_id"],
-                tweet["status_text"],
-                tweet["user_id"],
-                tweet["user_screen_name"],
-                tweet["status_reply"],
-                tweet["status_at"],
-                datetime.now(),
-                datetime.now()))
-        # combine VALUES array with ", "
-        sql = sql + ", ".join(vals)
+        # an INSERT statement template.
+        sql = ("INSERT INTO statuses"
+               " (status_id, status_text, user_id, user_screen_name, status_reply,"
+               "status_at, created_at, updated_at) VALUES "
+               " (:status_id, :status_text, :user_id, :user_screen_name, :status_reply,"
+               "  :status_at, :created_at, :updated_at)")
 
-        # execute the sql
-        try:
-            self.db.cur.execute(sql)
-        except Exception, detail:
-            sys.stderr.write("Cannot insert into DB.  " + detail[0] + "\n")
-            self.db.conn.rollback()
-        else:
-            self.db.conn.commit()
+        for tweet in tweets:
+            tweet["created_at"] = datetime.now()
+            tweet["updated_at"] = datetime.now()
+            # execute the sql
+            try:
+                self.db.cur.execute(sql, tweet)
+            except Exception, detail:
+                sys.stderr.write("Cannot insert into DB.  " + detail[0] + "\n")
+                self.db.conn.rollback()
+                return
+
+        self.db.conn.commit()
 
         return
 
