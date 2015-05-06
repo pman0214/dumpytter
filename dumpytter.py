@@ -71,15 +71,7 @@ class Dumpytter():
 
     #--------------------------------------------------
     def __call__(self):
-        # retrieve last status_id.
-        last_status_id = self.get_last_status_id()
-        if last_status_id is None:
-            sys.stderr.write("Cannot get last status_id from DB.\n")
-            self.__destroy()
-            quit()
-
-        # retrieve new tweets.
-        raw_tweets = self.get_tweets(since_id=last_status_id)
+        raw_tweets = self.get_new_tweets_amap()
         if len(raw_tweets) == 0:
             # no new tweets
             sys.stderr.write("No new tweets.\n")
@@ -95,46 +87,70 @@ class Dumpytter():
     def get_last_status_id(self):
         self.db.cur.execute("SELECT status_id FROM statuses ORDER BY status_id DESC LIMIT 1")
         res = self.db.cur.fetchone()
-        ret = res.get("status_id", None)
+        if res is not None:
+            ret = res.get("status_id", None)
+        else:
+            ret = None
         return ret
 
     #--------------------------------------------------
     def store_to_db(self, tweets):
+        # an INSERT statement template.
+        sql = ("INSERT INTO statuses"
+               " (status_id, status_text, user_id, user_screen_name, status_reply,"
+               "status_at, created_at, updated_at) VALUES "
+               " (:status_id, :status_text, :user_id, :user_screen_name, :status_reply,"
+               "  :status_at, :created_at, :updated_at)")
 
-        # generate an INSERT statement.
-        sql = "INSERT INTO statuses (status_id, status_text, user_id, user_screen_name, status_reply, status_at, created_at, updated_at) VALUES "
-        vals = []
         for tweet in tweets:
-            vals.append('(%d, "%s", %d, "%s", "%s", "%s", "%s", "%s")' % (
-                tweet["status_id"],
-                tweet["status_text"],
-                tweet["user_id"],
-                tweet["user_screen_name"],
-                tweet["status_reply"],
-                tweet["status_at"],
-                datetime.now(),
-                datetime.now()))
-        # combine VALUES array with ", "
-        sql = sql + ", ".join(vals)
+            tweet["created_at"] = datetime.now()
+            tweet["updated_at"] = datetime.now()
+            # execute the sql
+            try:
+                self.db.cur.execute(sql, tweet)
+            except Exception, detail:
+                sys.stderr.write("Cannot insert into DB.  " + detail[0] + "\n")
+                self.db.conn.rollback()
+                return
 
-        # execute the sql
-        try:
-            self.db.cur.execute(sql)
-        except Exception, detail:
-            sys.stderr.write("Cannot insert into DB.  " + detail[0] + "\n")
-            self.db.conn.rollback()
-        else:
-            self.db.conn.commit()
+        self.db.conn.commit()
 
         return
 
     #--------------------------------------------------
-    def get_tweets(self, since_id=None):
-        if since_id is None:
-            tweets = self.conn.get(url="statuses/user_timeline.json")
-        else:
-            tweets = self.conn.get(url="statuses/user_timeline.json",
-                                   params={"since_id": since_id})
+    # get new tweets as much as possible
+    def get_new_tweets_amap(self):
+        # retrieve last status_id.
+        since_id = self.get_last_status_id()
+        max_id = None
+
+        # retrieve new tweets up to 3200 tweets.
+        raw_tweets = []
+        for cnt in range(0,16):
+            # retrieve new tweets up to 200 tweets.
+            #   API limits max number of tweet retrieval.
+            tweets = self.get_tweets(since_id=since_id, max_id=max_id)
+            # merge (newer first).
+            raw_tweets.extend(tweets)
+
+            # no more new tweets?
+            if tweets is None or len(tweets) == 0:
+                break
+
+            # update max_id to retrieve old tweets
+            max_id = tweets[-1]["id"] - 1
+
+        return raw_tweets
+
+    #--------------------------------------------------
+    def get_tweets(self, since_id=None, max_id=None):
+        params = {"count": 200}
+        if since_id is not None:
+            params["since_id"] =  since_id
+        if max_id is not None:
+            params["max_id"] = max_id
+        tweets = self.conn.get(url="statuses/user_timeline.json",
+                               params=params)
 
         # check HTTP status to return error when error.
         ret = None
@@ -165,13 +181,13 @@ class Dumpytter():
         return tweets
 
     #--------------------------------------------------
-    def __destroy(self):
+    def __del__(self):
         del self.db
         del self.conf
         del self.conn
         return
 
-    #--------------------------------------------------
-    def __del__(self):
-        self.__destroy()
-        return
+#======================================================================
+if __name__ == "__main__":
+    dump = Dumpytter()
+    dump()
